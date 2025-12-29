@@ -1,3 +1,21 @@
+# =========================================================
+#  نویسنده / Author        : @Mani_coder
+#  منتشر شده توسط / Shared by : @Source_donii
+#
+#  این فایل به‌صورت عمومی منتشر شده است، اما
+#  مالکیت معنوی و حقوق نویسنده محفوظ می‌باشد.
+#  استفاده، ویرایش یا بازنشر این فایل تنها با
+#  ذکر نام نویسنده و منبع مجاز است.
+#
+#  This file is publicly shared; however,
+#  intellectual property rights remain
+#  with the original author.
+#  Any use, modification, or redistribution
+#  is permitted only with proper credit.
+#
+#  © All Rights Reserved | تمامی حقوق محفوظ است
+# =========================================================
+
 import os
 import json
 import asyncio
@@ -27,15 +45,18 @@ ADMIN_ID = 7349237747  # شناسه عددی ادمین
 
 # تنظیمات کانال‌ها
 BACKUP_CHANNEL = "t.me/backup2024p"
-REQUESTS_CHANNEL = "@Zero_Receiver"
+REQUESTS_CHANNEL = "@Zoro_Receiver"
 SETTLEMENT_CHANNEL = "@deposit2024p"
 
-# مسیر فایل‌ها
+SUPPORT_USER = "@ZeroReceiversup"
+SUPPORT_LINK = "https://t.me/ZeroReceiversup"
+CHANNEL_LINK = "https://t.me/Zero_Receiver"
+BOT_LINK = "https://t.me/Zero_Receiver_bot"
+
 PRICES_FILE = 'settings/prices.json'
 COUNTRY_CODES_FILE = 'settings/country_codes.json'
 SESSIONS_FOLDER = 'sessions'
 
-# تنظیمات لاگینگ
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -62,8 +83,7 @@ def parse_proxy_string(proxy_str):
     proxy_str = proxy_str.strip()
     if not proxy_str:
         return None
-    
-    # بررسی پروتکل
+
     proxy_type = None
     if proxy_str.startswith('socks5://'):
         proxy_type = 'socks5'
@@ -72,20 +92,16 @@ def parse_proxy_string(proxy_str):
         proxy_type = 'http'
         proxy_str = proxy_str.replace('http://', '')
     else:
-        # اگر پروتکسی ذکر نشده بود، بررسی کن یوزر پسورد دارد یا نه
-        # اگر یوزر پسورد داشت احتمالا ساکس 5 است، والا اچ تی تی پی
         if ':' in proxy_str and proxy_str.count(':') >= 3:
             proxy_type = 'socks5'
         else:
-            proxy_type = 'http' # پیش‌فرض
+            proxy_type = 'http'
 
     parts = proxy_str.split(':')
-    
-    # حالت ip:port
+
     if len(parts) == 2:
         return (proxy_type, parts[0], int(parts[1]), True)
-    
-    # حالت ip:port:user:pass
+
     elif len(parts) == 4:
         return (proxy_type, parts[0], int(parts[1]), True, parts[2], parts[3])
     
@@ -100,7 +116,6 @@ class Database:
 
     async def init_db(self):
         async with aiosqlite.connect(self.db_name) as db:
-            # جدول کاربران
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     user_id INTEGER PRIMARY KEY,
@@ -114,7 +129,6 @@ class Database:
                     wallet_number TEXT
                 )
             """)
-            # جدول درخواست‌ها
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS requests (
                     prefix TEXT PRIMARY KEY,
@@ -123,7 +137,6 @@ class Database:
                     flag_emoji TEXT
                 )
             """)
-            # جدول شماره‌ها
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS numbers (
                     phone_number TEXT PRIMARY KEY,
@@ -133,7 +146,6 @@ class Database:
                     registered_at TEXT
                 )
             """)
-            # جدول پروکسی‌ها (جدید)
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS proxies (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -144,7 +156,6 @@ class Database:
             await db.commit()
         logger.info("✅ Database initialized successfully.")
 
-    # --- مدیریت کاربران ---
     async def add_or_update_user(self, user_id, first_name, username):
         async with aiosqlite.connect(self.db_name) as db:
             await db.execute("""
@@ -174,7 +185,6 @@ class Database:
             """, (fullname, card_number, wallet_number, user_id))
             await db.commit()
 
-    # --- مدیریت شماره‌ها ---
     async def is_number_globally_exists(self, phone_number):
         async with aiosqlite.connect(self.db_name) as db:
             async with db.execute("SELECT 1 FROM numbers WHERE phone_number=?", (phone_number,)) as cursor:
@@ -202,7 +212,6 @@ class Database:
                 row = await cursor.fetchone()
                 return row[0] if row else 0
 
-    # --- مدیریت درخواست‌ها ---
     async def save_request(self, prefix, country_name, flag, count, user_id):
         async with aiosqlite.connect(self.db_name) as db:
             await db.execute("""
@@ -231,7 +240,6 @@ class Database:
                     await db.commit()
                     return True
 
-    # --- مدیریت پروکسی‌ها ---
     async def add_proxy(self, proxy_str):
         async with aiosqlite.connect(self.db_name) as db:
             await db.execute("INSERT INTO proxies (proxy_string, added_at) VALUES (?, ?)", (proxy_str, str(datetime.now())))
@@ -298,14 +306,13 @@ class BotHandler:
                 return self.country_codes[code]
         return None
 
-    # --- پنل ادمین ---
     async def send_admin_panel(self, event):
         count = await self.db.get_proxy_count()
         req_count = len(await self.db.get_all_requests())
         total_users = await self.db.get_total_users()
         
         text = f"""
-        🛠 **پنل مدیریت ادمین:**
+        🛠 <b>پنل مدیریت ادمین:</b>
         ────────────────
         👥 کاربران: {total_users}
         📩 درخواست‌های باز: {req_count}
@@ -317,37 +324,37 @@ class BotHandler:
             [Button.inline("🌐 مدیریت پروکسی‌ها", b"proxy_menu")],
             [Button.inline("📊 آمار دقیق", b"stats_detail")],
         ]
-        await event.edit(text, buttons=buttons)
+        await event.edit(text, buttons=buttons, parse_mode='html')
 
     async def proxy_menu_handler(self, event):
         count = await self.db.get_proxy_count()
-        text = f"🌐 **مدیریت پروکسی‌ها**\nتعداد پروکسی در سیستم: {count} عدد"
+        text = f"🌐 <b>مدیریت پروکسی‌ها</b>\nتعداد پروکسی در سیستم: {count} عدد"
         buttons = [
             [Button.inline("➕ افزودن تکی", b"add_single_proxy")],
             [Button.inline("📂 آپلود فایل لیست", b"upload_proxy_file")],
             [Button.inline("🗑 حذف همه پروکسی‌ها", b"clear_proxies")],
             [Button.inline("🔙 بازگشت به پنل", b"back_to_panel")]
         ]
-        await event.edit(text, buttons=buttons)
+        await event.edit(text, buttons=buttons, parse_mode='html')
 
     async def add_single_proxy_flow(self, event):
         async with self.bot.conversation(ADMIN_ID, timeout=120) as conv:
-            await conv.send_message("📝 **لطفاً پروتکل و آدرس پروکسی را ارسال کنید.**\n\nمثال:\n`socks5://ip:port:user:pass`\n`http://ip:port`\n`ip:port`", parse_mode='markdown')
+            await conv.send_message("📝 <b>لطفاً پروتکل و آدرس پروکسی را ارسال کنید.</b>\n\nمثال:\n<code>socks5://ip:port:user:pass</code>\n<code>http://ip:port</code>\n<code>ip:port</code>", parse_mode='html')
             resp = await conv.get_response()
             proxy_str = resp.text.strip()
             
             parsed = parse_proxy_string(proxy_str)
             if parsed:
                 await self.db.add_proxy(proxy_str)
-                await event.respond("✅ پروکسی با موفقیت اضافه شد.")
-                await self.send_admin_panel(await event.respond("بروزرسانی..."))
+                await event.respond("✅ پروکسی با موفقیت اضافه شد.", parse_mode='html')
+                await self.send_admin_panel(await event.respond("بروزرسانی...", parse_mode='html'))
             else:
-                await event.respond("❌ فرمت پروکسی اشتباه است.")
+                await event.respond("❌ فرمت پروکسی اشتباه است.", parse_mode='html')
                 await self.proxy_menu_handler(event)
 
     async def upload_proxy_file_flow(self, event):
         async with self.bot.conversation(ADMIN_ID, timeout=300) as conv:
-            await conv.send_message("📂 **لطفاً فایل متنی (.txt) حاوی لیست پروکسی‌ها را ارسال کنید.**\n(هر خط یک پروکسی)")
+            await conv.send_message("📂 <b>لطفاً فایل متنی (.txt) حاوی لیست پروکسی‌ها را ارسال کنید.</b>\n(هر خط یک پروکسی)", parse_mode='html')
             file_msg = await conv.get_response()
             
             if file_msg.file:
@@ -363,18 +370,17 @@ class BotHandler:
                     
                     if valid_proxies:
                         await self.db.add_proxies_bulk(valid_proxies)
-                        await conv.send_message(f"✅ {len(valid_proxies)} پروکسی از فایل استخراج و ذخیره شدند.")
+                        await conv.send_message(f"✅ {len(valid_proxies)} پروکسی از فایل استخراج و ذخیره شدند.", parse_mode='html')
                         os.remove(path)
-                        await self.send_admin_panel(await conv.send_message("بازگشت..."))
+                        await self.send_admin_panel(await conv.send_message("بازگشت...", parse_mode='html'))
                     else:
-                        await conv.send_message("⚠️ هیچ پروکسی معتبری در فایل یافت نشد.")
-                        await self.proxy_menu_handler(await conv.send_message("بازگشت..."))
+                        await conv.send_message("⚠️ هیچ پروکسی معتبری در فایل یافت نشد.", parse_mode='html')
+                        await self.proxy_menu_handler(await conv.send_message("بازگشت...", parse_mode='html'))
                 except Exception as e:
-                    await conv.send_message(f"❌ خطا در خواندن فایل: {e}")
+                    await conv.send_message(f"❌ خطا در خواندن فایل: {e}", parse_mode='html')
             else:
-                await conv.send_message("❌ فایلی ارسال نشد.")
+                await conv.send_message("❌ فایلی ارسال نشد.", parse_mode='html')
 
-    # --- مدیریت شماره‌ها ---
     async def background_verification_task(self, user_id, phone_number, country_code):
         try:
             await asyncio.sleep(600) 
@@ -386,7 +392,7 @@ class BotHandler:
                 request_completed = await self.db.update_request_state(prefix)
                 
                 try:
-                    await self.bot.send_message(user_id, f"🎉 **شماره تایید شد و {price} تومان اضافه گردید.**\n💰 موجودی: {new_balance} تومان")
+                    await self.bot.send_message(user_id, f"🎉 <b>شماره تایید شد و {price} تومان اضافه گردید.</b>\n💰 موجودی: {new_balance} تومان", parse_mode='html')
                     if request_completed:
                         logger.info(f"Request {prefix} completed and removed from DB.")
                 except Exception as e:
@@ -397,22 +403,22 @@ class BotHandler:
     async def login_user(self, event):
         user_id = event.sender_id
         async with self.bot.conversation(event.sender_id, timeout=300) as conv:
-            await conv.send_message("📱 **لطفاً شماره تلفن خود را با فرمت + وارد کنید:**")
+            await conv.send_message("📱 <b>لطفاً شماره تلفن خود را با فرمت + وارد کنید:</b>", parse_mode='html')
             phone_message = await conv.get_response()
             phone_number = phone_message.text.strip()
 
             if not re.match(r'^\+[1-9]\d{1,14}$', phone_number):
-                await conv.send_message("❌ **فرمت شماره اشتباه است. (مثال: +98912...)**")
+                await conv.send_message("❌ <b>فرمت شماره اشتباه است. (مثال: +98912...)</b>", parse_mode='html')
                 return
 
             is_duplicate = await self.db.is_number_globally_exists(phone_number)
             if is_duplicate:
-                await conv.send_message("⚠️ **این شماره قبلاً در سیستم ثبت شده است.**")
+                await conv.send_message("⚠️ <b>این شماره قبلاً در سیستم ثبت شده است.</b>", parse_mode='html')
                 return
 
             country_code = self.get_country_code(phone_number)
             if not country_code:
-                await conv.send_message("❌ **کشور مربوط به این پیش‌شماره پشتیبانی نمی‌شود.**")
+                await conv.send_message("❌ <b>کشور مربوط به این پیش‌شماره پشتیبانی نمی‌شود.</b>", parse_mode='html')
                 return
 
             session_folder = os.path.join(SESSIONS_FOLDER, country_code)
@@ -443,13 +449,13 @@ class BotHandler:
                     await user_client.send_code_request(phone_number)
                     await random_sleep(2, 4)
                 except FloodWaitError as e:
-                    await conv.send_message(f"⏳ **تلگرام محدودیت اعمال کرد. لطفاً {e.seconds} ثانیه صبر کنید.**")
+                    await conv.send_message(f"⏳ <b>تلگرام محدودیت اعمال کرد. لطفاً {e.seconds} ثانیه صبر کنید.</b>", parse_mode='html')
                     return
                 except PhoneNumberInvalidError:
-                    await conv.send_message("❌ **شماره معتبر نیست.**")
+                    await conv.send_message("❌ <b>شماره معتبر نیست.</b>", parse_mode='html')
                     return
 
-                await conv.send_message("🔑 **کد تأیید ارسال شد. لطفاً کد را وارد کنید:**")
+                await conv.send_message("🔑 <b>کد تأیید ارسال شد. لطفاً کد را وارد کنید:</b>", parse_mode='html')
                 code_message = await conv.get_response()
                 code = code_message.text.strip()
                 
@@ -458,21 +464,21 @@ class BotHandler:
                 try:
                     await user_client.sign_in(phone=phone_number, code=code)
                 except SessionPasswordNeededError:
-                    await conv.send_message("🔒 **این شماره دارای رمز دوم است. لطفاً رمز دوم را وارد کنید:**")
+                    await conv.send_message("🔒 <b>این شماره دارای رمز دوم است. لطفاً رمز دوم را وارد کنید:</b>", parse_mode='html')
                     pwd_message = await conv.get_response()
                     password = pwd_message.text.strip()
                     await user_client.sign_in(password=password)
                 except (PhoneCodeInvalidError, PhoneCodeExpiredError) as e:
-                    await conv.send_message("❌ **کد اشتباه یا منقضی شده است.**")
+                    await conv.send_message("❌ <b>کد اشتباه یا منقضی شده است.</b>", parse_mode='html')
                     logger.info(f"Login failed for {user_id}: {e}")
                     return
                 except FloodWaitError as e:
-                     await conv.send_message(f"⏳ **لطفاً {e.seconds} ثانیه صبر کنید.**")
+                     await conv.send_message(f"⏳ <b>لطفاً {e.seconds} ثانیه صبر کنید.</b>", parse_mode='html')
                      return
                 
                 success = await self.db.register_number(user_id, phone_number, country_code)
                 if not success:
-                    await conv.send_message("⚠️ **خطای دیتابیس در ثبت نهایی.**")
+                    await conv.send_message("⚠️ <b>خطای دیتابیس در ثبت نهایی.</b>", parse_mode='html')
                     return
 
                 session_string = user_client.session.save()
@@ -480,118 +486,122 @@ class BotHandler:
                 async with aiofiles.open(session_path, 'w', encoding='utf-8') as session_file:
                     await session_file.write(session_string)
 
-                await conv.send_message("✅ **شماره با موفقیت ثبت شد.**\n⏳ **تا 10 دقیقه دیگر تایید و تسویه می‌شود.**")
+                await conv.send_message("✅ <b>شماره با موفقیت ثبت شد.</b>\n⏳ <b>تا 10 دقیقه دیگر تایید و تسویه می‌شود.</b>", parse_mode='html')
                 
-                message_text = f"📱 **شماره ثبت‌شده:** {phone_number}\n👤 کاربر: {user_id}\n🔑 کشور: {country_code}"
-                await self.bot.send_message(BACKUP_CHANNEL, message_text)
+                message_text = f"📱 <b>شماره ثبت‌شده:</b> {phone_number}\n👤 کاربر: {user_id}\n🔑 کشور: {country_code}"
+                await self.bot.send_message(BACKUP_CHANNEL, message_text, parse_mode='html')
                 await self.bot.send_file(BACKUP_CHANNEL, session_path, caption=f"📂 Session: {phone_number}")
 
                 asyncio.create_task(self.background_verification_task(user_id, phone_number, country_code))
 
             except Exception as e:
                 logger.error(f"Unexpected Login error for {user_id}: {e}")
-                await conv.send_message(f"❌ **خطای سیستمی:** {str(e)}")
+                await conv.send_message(f"❌ <b>خطای سیستمی:</b> {str(e)}", parse_mode='html')
             finally:
                 await user_client.disconnect()
 
     async def request_numbers_admin(self, event):
         user_id = event.sender_id
         if user_id != ADMIN_ID:
-            await event.respond("🚫 **دسترسی غیرمجاز.**")
+            await event.respond("🚫 <b>دسترسی غیرمجاز.</b>", parse_mode='html')
             return
             
         async with self.bot.conversation(event.sender_id, timeout=300) as conv:
-            await conv.send_message("📞 **پیش‌شماره را وارد کنید (مثال: +98):**")
+            await conv.send_message("📞 <b>پیش‌شماره را وارد کنید (مثال: +98):</b>", parse_mode='html')
             prefix_msg = await conv.get_response()
             prefix = prefix_msg.text.strip()
 
-            await conv.send_message("🌍 **نام کشور:**")
+            await conv.send_message("🌍 <b>نام کشور:</b>", parse_mode='html')
             country_msg = await conv.get_response()
             country = country_msg.text.strip()
 
-            await conv.send_message("🚩 **ایموجی پرچم:**")
+            await conv.send_message("🚩 <b>ایموجی پرچم:</b>", parse_mode='html')
             flag_msg = await conv.get_response()
             flag = flag_msg.text.strip()
 
-            await conv.send_message("🔢 **تعداد مورد نیاز:**")
+            await conv.send_message("🔢 <b>تعداد مورد نیاز:</b>", parse_mode='html')
             count_msg = await conv.get_response()
             try:
                 count = int(count_msg.text.strip())
             except ValueError:
-                await conv.send_message("❌ لطفاً عدد وارد کنید.")
+                await conv.send_message("❌ لطفاً عدد وارد کنید.", parse_mode='html')
                 return
 
             await self.db.save_request(prefix, country, flag, count, user_id)
 
             price = self.prices.get(prefix, "نامشخص")
             msg = f"{flag} {country} ({prefix})\nPrice: {price} IRT"
-            btn = Button.url("ورود به ربات", "https://t.me/Zero_Receiver_bot")
-            await self.bot.send_message(REQUESTS_CHANNEL, msg, buttons=[btn])
-            await conv.send_message(f"✅ درخواست ثبت شد.")
+            btn = Button.url("ورود به ربات", BOT_LINK)
+            await self.bot.send_message(REQUESTS_CHANNEL, msg, buttons=[btn], parse_mode='html')
+            await conv.send_message(f"✅ درخواست ثبت شد.", parse_mode='html')
 
     async def request_list(self, event):
         requests = await self.db.get_all_requests()
         if not requests:
-            await event.respond("هیچ درخواستی موجود نیست.")
+            await event.respond("هیچ درخواستی موجود نیست.", parse_mode='html')
             return
-        msg = "**لیست درخواست‌های فعال:**\n\n"
+        msg = "<b>لیست درخواست‌های فعال:</b>\n\n"
         for req in requests:
             msg += f"{req[3]} {req[2]} ({req[0]}) - {req[1]} عدد\n/////////////////////////////////////////\n"
-        btn = Button.url("کانال اطلاعیه", "https://t.me/Zero_Receiver")
-        await event.respond(msg, buttons=[btn])
+        btn = Button.url("کانال اطلاعیه", CHANNEL_LINK)
+        await event.respond(msg, buttons=[btn], parse_mode='html')
 
     async def collect_user_information(self, event):
         user_id = event.sender_id
         user_data = await self.db.get_user(user_id)
         if user_data and user_data[6] and user_data[7] and user_data[8]: 
-            await event.respond("✅ **اطلاعات شما قبلاً ثبت شده است.**")
+            await event.respond("✅ <b>اطلاعات شما قبلاً ثبت شده است.</b>", parse_mode='html')
             return
         async with self.bot.conversation(user_id, timeout=300) as conv:
-            await conv.send_message("📝 **نام کامل:**")
+            await conv.send_message("📝 <b>نام کامل:</b>", parse_mode='html')
             full = (await conv.get_response()).text.strip()
-            await conv.send_message("💳 **شماره کارت (16 رقم):**")
+            await conv.send_message("💳 <b>شماره کارت (16 رقم):</b>", parse_mode='html')
             card = (await conv.get_response()).text.strip()
             if not re.match(r'^\d{16}$', card):
-                await conv.send_message("❌ شماره کارت باید 16 رقم باشد.")
+                await conv.send_message("❌ شماره کارت باید 16 رقم باشد.", parse_mode='html')
                 return
-            await conv.send_message("💼 **شماره کیف پول (ولت):**")
+            await conv.send_message("💼 <b>شماره کیف پول (ولت):</b>", parse_mode='html')
             wallet = (await conv.get_response()).text.strip()
             await self.db.update_user_bank_info(user_id, full, card, wallet)
-            await conv.send_message("✅ اطلاعات حساب ذخیره شد.")
+            await conv.send_message("✅ اطلاعات حساب ذخیره شد.", parse_mode='html')
 
     async def settle_handler(self, event):
         user_id = event.sender_id
         user_data = await self.db.get_user(user_id)
-        if not user_data: await event.respond("⚠️ ابتدا استارت را بزنید."); return
+        if not user_data: 
+            await event.respond("⚠️ ابتدا استارت را بزنید.", parse_mode='html')
+            return
         if not user_data[6] or not user_data[7] or not user_data[8]:
-             await event.respond("⚠️ لطفاً ابتدا اطلاعات حساب را با دستور /information تکمیل کنید.")
+             await event.respond("⚠️ لطفاً ابتدا اطلاعات حساب را با دستور /information تکمیل کنید.", parse_mode='html')
              return
         balance = user_data[5]
         if balance > 0:
             async with self.bot.conversation(user_id, timeout=300) as conv:
-                text = f"**درخواست تسویه:** 💵 {balance} تومان\nاگر موافقید دکمه زیر را بزنید:"
+                text = f"<b>درخواست تسویه:</b> 💵 {balance} تومان\nاگر موافقید دکمه زیر را بزنید:"
                 btn = Button.inline("✅ قبول می‌کنم", b'accept_settle')
-                await conv.send_message(text, buttons=[btn])
+                await conv.send_message(text, buttons=[btn], parse_mode='html')
                 res = await conv.wait_event(events.CallbackQuery(data=b'accept_settle'))
                 if res:
                     fullname, card, wallet = user_data[6], user_data[7], user_data[8]
                     report = f"📊 درخواست تسویه:\n👤 نام: {fullname}\n💳 کارت: {card}\n💰 مبلغ: {balance} تومان\n🆔 آیدی: {user_id}"
-                    await self.bot.send_message(SETTLEMENT_CHANNEL, report)
+                    await self.bot.send_message(SETTLEMENT_CHANNEL, report, parse_mode='html')
                     await self.db.settle_balance(user_id)
-                    await event.respond("✅ درخواست تسویه ثبت شد.")
+                    await event.respond("✅ درخواست تسویه ثبت شد.", parse_mode='html')
         else:
-            await event.respond("❌ موجودی کافی نیست.")
+            await event.respond("❌ موجودی کافی نیست.", parse_mode='html')
 
     async def display_account_info(self, event):
         user_id = event.sender_id
         user_data = await self.db.get_user(user_id)
-        if not user_data: await event.respond("اطلاعاتی یافت نشد."); return
-        text = f"📋 **اطلاعات حساب:**\n🔤 نام کاربری: {user_data[2]}\n🆔 آیدی: {user_data[0]}\n📅 تاریخ: {user_data[3]}\n🔢 شماره‌ها: {user_data[4]}\n💰 موجودی: {user_data[5]} تومان"
+        if not user_data: 
+            await event.respond("اطلاعاتی یافت نشد.", parse_mode='html')
+            return
+        text = f"📋 <b>اطلاعات حساب:</b>\n🔤 نام کاربری: {user_data[2]}\n🆔 آیدی: {user_data[0]}\n📅 تاریخ: {user_data[3]}\n🔢 شماره‌ها: {user_data[4]}\n💰 موجودی: {user_data[5]} تومان"
         try:
-            btn = Button.url("💬 پشتیبانی", "https://t.me/ZeroReceiversup")
-            await self.bot.send_file(event.sender_id, 'settings/user.jpg', caption=text, buttons=[btn])
+            btn = Button.url("💬 پشتیبانی", SUPPORT_LINK)
+            await self.bot.send_file(event.sender_id, 'settings/user.jpg', caption=text, buttons=[btn], parse_mode='html')
         except:
-            await event.respond(text)
+            await event.respond(text, parse_mode='html')
 
     async def run(self):
         await self.db.init_db()
@@ -601,20 +611,19 @@ class BotHandler:
         async def start(event):
             user_id = event.sender_id
             await self.db.add_or_update_user(user_id, event.sender.first_name, event.sender.username)
-            await event.respond("👋 سلام! به ربات حرفه‌ای خوش آمدید.\nبرای راهنما /help را بزنید.")
+            await event.respond("👋 سلام! به ربات حرفه‌ای خوش آمدید.\nبرای راهنما /help را بزنید.", parse_mode='html')
 
         @self.bot.on(events.NewMessage(pattern='/support'))
         async def support(event):
-            await event.respond("📞 **پشتیبانی:**\n@ZeroReceiversup", link_preview=False)
+            await event.respond(f"📞 <b>پشتیبانی:</b>\n{SUPPORT_USER}", link_preview=False, parse_mode='html')
 
         @self.bot.on(events.NewMessage(pattern='/admin'))
         async def admin_cmd(event):
             if event.sender_id == ADMIN_ID:
                 await self.send_admin_panel(event)
             else:
-                await event.respond("🚫")
+                await event.respond("🚫", parse_mode='html')
 
-        # --- Callback Handlers ---
         @self.bot.on(events.CallbackQuery(data=b'back_to_panel'))
         async def back(event):
             if event.sender_id == ADMIN_ID:
@@ -645,7 +654,7 @@ class BotHandler:
         @self.bot.on(events.CallbackQuery(data=b'manage_requests'))
         async def mr(event):
             if event.sender_id == ADMIN_ID:
-                await event.edit("📦 مدیریت درخواست‌ها:\nبرای افزودن درخواست جدید دستور /request را بزنید.", buttons=[Button.inline("🔙 بازگشت", b"back_to_panel")])
+                await event.edit("📦 مدیریت درخواست‌ها:\nبرای افزودن درخواست جدید دستور /request را بزنید.", buttons=[Button.inline("🔙 بازگشت", b"back_to_panel")], parse_mode='html')
 
         @self.bot.on(events.CallbackQuery(data=b'stats_detail'))
         async def sd(event):
@@ -653,7 +662,6 @@ class BotHandler:
                 users = await self.db.get_total_users()
                 await event.answer(f"کاربران: {users}", alert=True)
 
-        # --- Command Handlers ---
         @self.bot.on(events.NewMessage(pattern='/request'))
         async def req(event):
             await self.request_numbers_admin(event)
@@ -664,7 +672,7 @@ class BotHandler:
             
         @self.bot.on(events.NewMessage(pattern='/help'))
         async def help(event):
-            await event.respond("/start\n/admin\n/register_number\n/profile\n/information\n/settle\n/countries")
+            await event.respond("/start\n/admin\n/register_number\n/profile\n/information\n/settle\n/countries", parse_mode='html')
 
         @self.bot.on(events.NewMessage(pattern='/countries'))
         async def list_req(event):
@@ -688,3 +696,22 @@ if __name__ == "__main__":
     bot = BotHandler()
     loop = asyncio.get_event_loop()
     loop.run_until_complete(bot.run())
+
+
+# =========================================================
+#  نویسنده / Author        : @Mani_coder
+#  منتشر شده توسط / Shared by : @Source_donii
+#
+#  این فایل به‌صورت عمومی منتشر شده است، اما
+#  مالکیت معنوی و حقوق نویسنده محفوظ می‌باشد.
+#  استفاده، ویرایش یا بازنشر این فایل تنها با
+#  ذکر نام نویسنده و منبع مجاز است.
+#
+#  This file is publicly shared; however,
+#  intellectual property rights remain
+#  with the original author.
+#  Any use, modification, or redistribution
+#  is permitted only with proper credit.
+#
+#  © All Rights Reserved | تمامی حقوق محفوظ است
+# =========================================================
